@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Dowdow/gosible/config"
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 var c = config.Config{}
 
 func main() {
 	args := os.Args[1:]
-	if len(args) == 0 {
-		fmt.Println("Usage: gosible <config.json>")
+	argsSize := len(args)
+
+	if argsSize == 0 {
+		fmt.Println("Usage: gosible <config.json> <task-index> <machine.user>")
 		os.Exit(0)
 	}
 
@@ -49,16 +50,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	var items = []list.Item{}
-	for _, task := range c.Tasks {
-		items = append(items, item(task.Name))
+	// If no task index provided, show available tasks
+	if argsSize < 2 {
+		c.Print()
+		os.Exit(0)
 	}
 
-	model := newModel(items)
-	if _, err := tea.NewProgram(model).Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: fail to initialize bubbletea\n%v\n", err)
+	// Parse and check task index
+	arg1 := args[1]
+	taskIndex, err := strconv.Atoi(arg1)
+	if err != nil {
+		fmt.Fprint(os.Stderr, "Error: the task index must be a positive integer\n")
 		os.Exit(1)
 	}
+	if taskIndex < 0 || taskIndex >= len(c.Tasks) {
+		fmt.Fprint(os.Stderr, "Error: the task index must be between 0 and task size -1\n")
+		os.Exit(1)
+	}
+
+	// Of no machine.user provided, show available machines and users
+	if argsSize < 3 {
+		err = c.PrintTask(taskIndex)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	// Merge idependant actions in the current task
+	c.MergeActions(taskIndex)
+
+	// Get the machine and User
+
+	// Execute task
 
 	/*
 		for _, task := range c.Tasks {
