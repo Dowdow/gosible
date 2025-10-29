@@ -25,7 +25,7 @@ func actionArgsFactory(t string) (any, error) {
 	case "shell":
 		return new(ShellArgs), nil
 	case "dir":
-		return &DirArgs{}, nil
+		return DirArgs{}, nil
 	}
 
 	return nil, fmt.Errorf("Unknown type: %s", t)

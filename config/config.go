@@ -22,7 +22,7 @@ func (c *Config) Print() {
 }
 
 func (c *Config) PrintTask(taskIndex int) error {
-	if taskIndex < 0 || taskIndex >= len(c.Tasks) {
+	if !c.HasTask(taskIndex) {
 		return fmt.Errorf("the task index must be between 0 and task size -1")
 	}
 
@@ -102,26 +102,18 @@ func (c *Config) ValidateIds() error {
 	return nil
 }
 
-func (c *Config) MergeActions(taskIndex int) error {
-	if taskIndex < 0 || taskIndex >= len(c.Tasks) {
-		return fmt.Errorf("the task index must be between 0 and task size -1")
-	}
+func (c *Config) HasTask(taskIndex int) bool {
+	return taskIndex >= 0 && taskIndex < len(c.Tasks)
+}
 
-	task := c.Tasks[taskIndex]
-
-	for _, action := range task.Actions {
-		if action.Id != "" {
-			for _, a := range c.Actions {
-				if a.Id == action.Id {
-					action.Id = ""
-					action.Name = a.Name
-					action.Machines = a.Machines
-					action.Type = a.Type
-					action.Args = a.Args
-				}
+func (c *Config) HasMachineUser(machineUser string) bool {
+	for _, machine := range c.Inventory {
+		for _, user := range machine.Users {
+			if machineUser == fmt.Sprintf("%s.%s", machine.Id, user.User) {
+				return true
 			}
 		}
 	}
 
-	return nil
+	return false
 }

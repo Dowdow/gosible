@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	"github.com/Dowdow/gosible/config"
+	"github.com/Dowdow/gosible/converter"
+	"github.com/Dowdow/gosible/runner"
 )
 
 var c = config.Config{}
@@ -63,12 +65,12 @@ func main() {
 		fmt.Fprint(os.Stderr, "Error: the task index must be a positive integer\n")
 		os.Exit(1)
 	}
-	if taskIndex < 0 || taskIndex >= len(c.Tasks) {
+	if !c.HasTask(taskIndex) {
 		fmt.Fprint(os.Stderr, "Error: the task index must be between 0 and task size -1\n")
 		os.Exit(1)
 	}
 
-	// Of no machine.user provided, show available machines and users
+	// If no machine.user provided, show available machines and users
 	if argsSize < 3 {
 		err = c.PrintTask(taskIndex)
 		if err != nil {
@@ -78,80 +80,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Merge idependant actions in the current task
-	c.MergeActions(taskIndex)
+	// Check the machine user combo
+	machineUser := args[2]
+	if !c.HasMachineUser(machineUser) {
+		fmt.Fprintf(os.Stderr, "Error: the machine.user combo '%s' does not exists\n", machineUser)
+		os.Exit(1)
+	}
 
-	// Get the machine and User
+	// Convert the config to runner struct
+	actions, machine, err := converter.ConvertConfig(&c, taskIndex, machineUser)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Execute task
-
-	/*
-		for _, task := range c.Tasks {
-			machineId := slices.IndexFunc(c.Inventory, func(machine config.Machine) bool {
-				return slices.Contains(task.Machines, machine.Id)
-			})
-
-			fmt.Println(c.Inventory[machineId].Address)
-			fmt.Println(c.Inventory[machineId].Name)
-			fmt.Println(c.Inventory[machineId].Users[0].Ssh)
-
-			key, err := os.ReadFile(c.Inventory[machineId].Users[0].Ssh)
-			if err != nil {
-				log.Fatalf("Impossible de lire la clé privée : %v", err)
-			}
-
-			signer, err := ssh.ParsePrivateKey(key)
-			if err != nil {
-				log.Fatalf("Erreur lors du parsing de la clé : %v", err)
-			}
-
-			fmt.Println(c.Inventory[machineId].Users[0].User)
-
-			clientConfig := &ssh.ClientConfig{
-				User: c.Inventory[machineId].Users[0].User,
-				Auth: []ssh.AuthMethod{
-					ssh.PublicKeys(signer),
-				},
-				HostKeyCallback: ssh.InsecureIgnoreHostKey(), // ⚠️ pour dev uniquement
-			}
-
-			client, err := ssh.Dial("tcp", c.Inventory[machineId].Address, clientConfig)
-			if err != nil {
-				log.Fatalf("Erreur de connexion SSH : %v", err)
-			}
-			defer client.Close()
-
-			for _, action := range task.Actions {
-				var command = action.Args
-				if action.Id != "" {
-					actionId := slices.IndexFunc(c.Actions, func(a config.Action) bool {
-						return a.Id == action.Id
-					})
-
-					command = c.Actions[actionId].Args
-				}
-
-				session, err := client.NewSession()
-				if err != nil {
-					log.Fatalf("Erreur de création de session : %v", err)
-				}
-				defer session.Close()
-
-				var stdout, stderr bytes.Buffer
-				session.Stdout = &stdout
-				session.Stderr = &stderr
-
-				if err := session.Run(command); err != nil {
-					log.Printf("Erreur d'exécution : %v\n", err)
-				}
-
-				fmt.Println("---- SORTIE STDOUT ----")
-				fmt.Println(stdout.String())
-				fmt.Println("---- SORTIE STDERR ----")
-				fmt.Println(stderr.String())
-
-				fmt.Println("✅ Commande exécutée avec succès !")
-			}
-			}
-	*/
+	runner.Run(*actions, *machine)
 }
