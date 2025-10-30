@@ -23,7 +23,7 @@ type DirArgs struct {
 func actionArgsFactory(t string) (any, error) {
 	switch t {
 	case "shell":
-		return new(ShellArgs), nil
+		return ShellArgs(""), nil
 	case "dir":
 		return DirArgs{}, nil
 	}
