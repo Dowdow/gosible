@@ -3,32 +3,30 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/Dowdow/gosible/args"
 )
 
 type Action struct {
-	Id       string   `json:"id"`
-	Name     string   `json:"name"`
-	Machines []string `json:"machines"`
-	Type     string   `json:"type"`
-	Args     any      `json:"args"`
+	Id       string    `json:"id"`
+	Name     string    `json:"name"`
+	Machines []string  `json:"machines"`
+	Type     string    `json:"type"`
+	Args     args.Args `json:"-"`
 }
 
-type ShellArgs string
-
-type DirArgs struct {
-	Path string `json:"path"`
-	Mod  string `json:"mod,omitempty"`
-}
-
-func actionArgsFactory(t string) (any, error) {
-	switch t {
+func (a *Action) argsFactory() (args.Args, error) {
+	switch a.Type {
 	case "shell":
-		return ShellArgs(""), nil
+		var s args.ShellArgs = ""
+		return &s, nil
+	case "copy":
+		return &args.CopyArgs{}, nil
 	case "dir":
-		return DirArgs{}, nil
+		return &args.DirArgs{}, nil
 	}
 
-	return nil, fmt.Errorf("Unknown type: %s", t)
+	return nil, fmt.Errorf("Unknown type: %s", a.Type)
 }
 
 func (a *Action) UnmarshalJSON(data []byte) error {
@@ -50,16 +48,16 @@ func (a *Action) UnmarshalJSON(data []byte) error {
 	a.Type = alias.Type
 	a.Args = nil
 
-	if alias.Type == "" {
+	if a.Type == "" {
 		return nil
 	}
 
-	args, err := actionArgsFactory(alias.Type)
+	args, err := a.argsFactory()
 	if err != nil {
 		return err
 	}
 
-	if err := json.Unmarshal(alias.Args, &args); err != nil {
+	if err := json.Unmarshal(alias.Args, args); err != nil {
 		return err
 	}
 

@@ -1,18 +1,18 @@
 package runner
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/Dowdow/gosible/args"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 )
 
 type Action struct {
 	Name string
 	Type string
-	Args any
+	Args args.Args
 }
 
 type Machine struct {
@@ -25,58 +25,68 @@ type Machine struct {
 }
 
 func Run(actions []Action, machine Machine) error {
-	// Prio clé ssh si pas vide
-	// Lecture mot de passe si pas vide
-	// Si aucun des deux erreur
+	authMethods := []ssh.AuthMethod{}
 
-	key, err := os.ReadFile(machine.Ssh)
-	if err != nil {
-		log.Fatalf("Impossible de lire la clé privée : %v", err)
+	// Private key auth method
+	if machine.Ssh != "" {
+		key, err := os.ReadFile(machine.Ssh)
+		if err != nil {
+			return fmt.Errorf("cannot read private key : %v", err)
+		}
+
+		signer, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			return fmt.Errorf("cannot parse private key : %v", err)
+		}
+
+		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	}
 
-	signer, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		log.Fatalf("Erreur lors du parsing de la clé : %v", err)
+	// Password auth method
+	if machine.Password != "" {
+		authMethods = append(authMethods, ssh.Password(machine.Password))
 	}
 
 	clientConfig := &ssh.ClientConfig{
-		User: machine.User,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
+		User:            machine.User,
+		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // dev
 	}
 
 	client, err := ssh.Dial("tcp", machine.Address, clientConfig)
 	if err != nil {
-		log.Fatalf("Erreur de connexion SSH : %v", err)
+		return fmt.Errorf("cannot ssh dial : %v", err)
 	}
 	defer client.Close()
 
 	for _, action := range actions {
 		session, err := client.NewSession()
 		if err != nil {
-			log.Fatalf("Erreur de création de session : %v", err)
+			return fmt.Errorf("cannot create ssh session : %v", err)
 		}
 		defer session.Close()
 
-		var stdout, stderr bytes.Buffer
-		session.Stdout = &stdout
-		session.Stderr = &stderr
+		if action.Args.Pty() {
+			modes := ssh.TerminalModes{
+				ssh.ECHO:          0,
+				ssh.ICANON:        0,
+				ssh.ISIG:          0,
+				ssh.TTY_OP_ISPEED: 14400,
+				ssh.TTY_OP_OSPEED: 14400,
+			}
 
-		command, ok := action.Args.(string)
-		if !ok {
-			continue
+			fd := int(os.Stdin.Fd())
+			width, height, _ := term.GetSize(fd)
+
+			if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
+				return fmt.Errorf("cannot request pty : %v", err)
+			}
 		}
 
-		if err := session.Run(command); err != nil {
-			log.Printf("Erreur d'exécution : %v\n", err)
+		err = action.Args.Run(session)
+		if err != nil {
+			return err
 		}
-
-		fmt.Println("---- SORTIE STDOUT ----")
-		fmt.Println(stdout.String())
-		fmt.Println("---- SORTIE STDERR ----")
-		fmt.Println(stderr.String())
 	}
 
 	return nil

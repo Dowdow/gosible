@@ -95,5 +95,9 @@ func main() {
 	}
 
 	// Execute task
-	runner.Run(*actions, *machine)
+	err = runner.Run(*actions, *machine)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
