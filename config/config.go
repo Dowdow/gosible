@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -14,58 +15,20 @@ type Config struct {
 	Tasks     []Task    `json:"tasks"`
 }
 
-func (c *Config) Print() {
-	fmt.Print("List of tasks:\n")
-	for index, task := range c.Tasks {
-		fmt.Printf(" > %d - %s (%d actions)\n", index, task.Name, len(task.Actions))
-	}
+func (c *Config) HasTask(taskIndex int) bool {
+	return taskIndex >= 0 && taskIndex < len(c.Tasks)
 }
 
-func (c *Config) PrintTask(taskIndex int) error {
-	if !c.HasTask(taskIndex) {
-		return fmt.Errorf("the task index must be between 0 and task size -1")
-	}
-
-	task := c.Tasks[taskIndex]
-
-	fmt.Printf("> %s\n", task.Name)
-	for _, action := range task.Actions {
-		if action.Id == "" {
-			fmt.Printf("   - %s\n", action.Name)
-			continue
-		}
-		for _, a := range c.Actions {
-			if a.Id == action.Id {
-				fmt.Printf("   - %s\n", a.Name)
-				break
-			}
-		}
-	}
-
-	fmt.Print("\nList of available machines and user:\n")
+func (c *Config) HasMachineUser(machineId string, userId string) bool {
 	for _, machine := range c.Inventory {
 		for _, user := range machine.Users {
-			if len(task.Machines) == 0 || slices.Contains(task.Machines, machine.Id) || slices.Contains(task.Machines, fmt.Sprintf("%s.%s", machine.Id, user.User)) {
-				fmt.Printf(" > %s.%s\n", machine.Id, user.User)
+			if machineId == machine.Id && userId == user.User {
+				return true
 			}
 		}
 	}
 
-	return nil
-}
-
-func (c *Config) ParseConfigFile(configFile string) error {
-	configData, err := os.ReadFile(configFile)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(configData, &c)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return false
 }
 
 func (c *Config) ValidateIds() error {
@@ -83,18 +46,18 @@ func (c *Config) ValidateIds() error {
 	}
 
 	for _, task := range c.Tasks {
-		for _, action := range task.Actions {
-			for _, machine := range action.Machines {
-				if !slices.Contains(machineUserIds, string(machine)) {
-					if strings.Contains(string(machine), ".") {
-						return fmt.Errorf("Machine.User id not found: %s", machine)
-					}
-					return fmt.Errorf("Machine id not found: %s", machine)
+		for _, machine := range task.Machines {
+			if !slices.Contains(machineUserIds, string(machine)) {
+				if strings.Contains(string(machine), ".") {
+					return fmt.Errorf("machine.user id not found: %s", machine)
 				}
+				return fmt.Errorf("machine id not found: %s", machine)
 			}
+		}
 
+		for _, action := range task.Actions {
 			if action.Id != "" && !slices.Contains(actionIds, action.Id) {
-				return fmt.Errorf("Action id not found: %s", action.Id)
+				return fmt.Errorf("action id not found: %s", action.Id)
 			}
 		}
 	}
@@ -102,18 +65,39 @@ func (c *Config) ValidateIds() error {
 	return nil
 }
 
-func (c *Config) HasTask(taskIndex int) bool {
-	return taskIndex >= 0 && taskIndex < len(c.Tasks)
-}
+func ParseConfig() (*Config, error) {
+	args := os.Args[1:]
+	configFilePath := args[0]
 
-func (c *Config) HasMachineUser(machineUser string) bool {
-	for _, machine := range c.Inventory {
-		for _, user := range machine.Users {
-			if machineUser == fmt.Sprintf("%s.%s", machine.Id, user.User) {
-				return true
-			}
-		}
+	info, err := os.Stat(configFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid file: %s", configFilePath)
 	}
 
-	return false
+	if info.IsDir() {
+		return nil, fmt.Errorf("%s is a directory", configFilePath)
+	}
+
+	extension := filepath.Ext(configFilePath)
+	if extension != ".json" {
+		return nil, fmt.Errorf("%s is not a JSON file (.json)", configFilePath)
+	}
+
+	configData, err := os.ReadFile(configFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read the config file: %v", err)
+	}
+
+	var c = Config{}
+	err = json.Unmarshal(configData, &c)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshall the config file: %v", err)
+	}
+
+	err = c.ValidateIds()
+	if err != nil {
+		return nil, fmt.Errorf("the ids are not corrects: %v", err)
+	}
+
+	return &c, nil
 }

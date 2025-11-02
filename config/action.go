@@ -8,11 +8,10 @@ import (
 )
 
 type Action struct {
-	Id       string    `json:"id"`
-	Name     string    `json:"name"`
-	Machines []string  `json:"machines"`
-	Type     string    `json:"type"`
-	Args     args.Args `json:"-"`
+	Id   string    `json:"id"`
+	Name string    `json:"name"`
+	Type string    `json:"type"`
+	Args args.Args `json:"-"`
 }
 
 func (a *Action) argsFactory() (args.Args, error) {
@@ -44,7 +43,6 @@ func (a *Action) UnmarshalJSON(data []byte) error {
 
 	a.Id = alias.Id
 	a.Name = alias.Name
-	a.Machines = alias.Machines
 	a.Type = alias.Type
 	a.Args = nil
 

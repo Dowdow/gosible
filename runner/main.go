@@ -9,6 +9,11 @@ import (
 	"golang.org/x/term"
 )
 
+type Config struct {
+	Machine Machine
+	Actions []Action
+}
+
 type Action struct {
 	Name string
 	Type string
@@ -24,12 +29,18 @@ type Machine struct {
 	Become   string
 }
 
-func Run(actions []Action, machine Machine) error {
+type RunnerMessage struct {
+	text   string
+	stdout string
+	stderr string
+}
+
+func Run(config Config) error {
 	authMethods := []ssh.AuthMethod{}
 
 	// Private key auth method
-	if machine.Ssh != "" {
-		key, err := os.ReadFile(machine.Ssh)
+	if config.Machine.Ssh != "" {
+		key, err := os.ReadFile(config.Machine.Ssh)
 		if err != nil {
 			return fmt.Errorf("cannot read private key : %v", err)
 		}
@@ -43,23 +54,23 @@ func Run(actions []Action, machine Machine) error {
 	}
 
 	// Password auth method
-	if machine.Password != "" {
-		authMethods = append(authMethods, ssh.Password(machine.Password))
+	if config.Machine.Password != "" {
+		authMethods = append(authMethods, ssh.Password(config.Machine.Password))
 	}
 
 	clientConfig := &ssh.ClientConfig{
-		User:            machine.User,
+		User:            config.Machine.User,
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // dev
 	}
 
-	client, err := ssh.Dial("tcp", machine.Address, clientConfig)
+	client, err := ssh.Dial("tcp", config.Machine.Address, clientConfig)
 	if err != nil {
 		return fmt.Errorf("cannot ssh dial : %v", err)
 	}
 	defer client.Close()
 
-	for _, action := range actions {
+	for _, action := range config.Actions {
 		session, err := client.NewSession()
 		if err != nil {
 			return fmt.Errorf("cannot create ssh session : %v", err)

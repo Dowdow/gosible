@@ -17,14 +17,14 @@ func (a DirArgs) Pty() bool {
 }
 
 func (a DirArgs) Run(session *ssh.Session) error {
+	session.Stdin = nil
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+
 	command := fmt.Sprintf("mkdir -p %s", a.Path)
 	if a.Mod != "" {
 		command = fmt.Sprintf("%s -m %s", command, a.Mod)
 	}
-
-	session.Stdin = nil
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
 
 	if err := session.Run(command); err != nil {
 		return fmt.Errorf("[dir] %v\n", err)

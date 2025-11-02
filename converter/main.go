@@ -7,19 +7,19 @@ import (
 	"github.com/Dowdow/gosible/runner"
 )
 
-func ConvertConfig(c *config.Config, taskIndex int, machineUser string) (*[]runner.Action, *runner.Machine, error) {
+func ConvertConfig(c *config.Config, taskIndex int, machineId string, userId string) (*runner.Config, error) {
 	if !c.HasTask(taskIndex) {
-		return nil, nil, fmt.Errorf("the task index must be between 0 and task size -1")
+		return nil, fmt.Errorf("the task index must be between 0 and task size -1")
 	}
-	if !c.HasMachineUser(machineUser) {
-		return nil, nil, fmt.Errorf("the machine.user combo '%s' does not exists\n", machineUser)
+	if !c.HasMachineUser(machineId, userId) {
+		return nil, fmt.Errorf("the machine/user combo '%s/%s' does not exists\n", machineId, userId)
 	}
 
 	// Convert config.Machine and config.User to runner.Machine
 	runnerMachine := runner.Machine{}
 	for _, machine := range c.Inventory {
 		for _, user := range machine.Users {
-			if machineUser == fmt.Sprintf("%s.%s", machine.Id, user.User) {
+			if machineId == machine.Id && userId == user.User {
 				runnerMachine.Address = machine.Address
 				runnerMachine.Name = machine.Name
 				runnerMachine.User = user.User
@@ -56,5 +56,8 @@ func ConvertConfig(c *config.Config, taskIndex int, machineUser string) (*[]runn
 		}
 	}
 
-	return &runnerActions, &runnerMachine, nil
+	return &runner.Config{
+		Machine: runnerMachine,
+		Actions: runnerActions,
+	}, nil
 }
