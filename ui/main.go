@@ -9,6 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type errorMsg struct {
+	err error
+}
+
 type parsedConfigMsg struct {
 	config *config.Config
 	err    error
@@ -86,6 +90,9 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.currentModel = newLogsModel(runnerConfig)
 		return m, m.currentModel.Init()
+	case errorMsg:
+		m.err = msg.err
+		return m, tea.Quit
 	}
 
 	var cmd tea.Cmd

@@ -1,9 +1,9 @@
-package args
+package runner
 
 import (
 	"fmt"
-	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -13,14 +13,12 @@ func (a ShellArgs) Pty() bool {
 	return true
 }
 
-func (a ShellArgs) Run(session *ssh.Session) error {
-	session.Stdin = nil
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
+func (a ShellArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
 	if err := session.Run(string(a)); err != nil {
 		return fmt.Errorf("[shell] %v\n", err)
 	}
+
+	fmt.Println("OUI")
 
 	return nil
 }

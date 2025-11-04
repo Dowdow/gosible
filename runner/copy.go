@@ -1,10 +1,11 @@
-package args
+package runner
 
 import (
 	"fmt"
 	"os"
 	"path"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -17,7 +18,7 @@ func (a CopyArgs) Pty() bool {
 	return false
 }
 
-func (a CopyArgs) Run(session *ssh.Session) error {
+func (a CopyArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
 	content, err := os.ReadFile(a.Src)
 	if err != nil {
 		return fmt.Errorf("[copy] %v\n", err)
@@ -28,9 +29,6 @@ func (a CopyArgs) Run(session *ssh.Session) error {
 		return fmt.Errorf("[copy] %v\n", err)
 	}
 	defer stdin.Close()
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
 
 	cmd := fmt.Sprintf("scp -t %s", path.Dir(a.Dest))
 	if err := session.Start(cmd); err != nil {

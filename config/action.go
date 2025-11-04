@@ -4,25 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Dowdow/gosible/args"
+	"github.com/Dowdow/gosible/runner"
 )
 
 type Action struct {
-	Id   string    `json:"id"`
-	Name string    `json:"name"`
-	Type string    `json:"type"`
-	Args args.Args `json:"-"`
+	Id   string      `json:"id"`
+	Name string      `json:"name"`
+	Type string      `json:"type"`
+	Args runner.Args `json:"-"`
 }
 
-func (a *Action) argsFactory() (args.Args, error) {
+func (a *Action) argsFactory() (runner.Args, error) {
 	switch a.Type {
 	case "shell":
-		var s args.ShellArgs = ""
+		var s runner.ShellArgs = ""
 		return &s, nil
 	case "copy":
-		return &args.CopyArgs{}, nil
+		return &runner.CopyArgs{}, nil
 	case "dir":
-		return &args.DirArgs{}, nil
+		return &runner.DirArgs{}, nil
 	}
 
 	return nil, fmt.Errorf("Unknown type: %s", a.Type)
