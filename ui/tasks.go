@@ -4,19 +4,9 @@ import (
 	"fmt"
 
 	"github.com/Dowdow/gosible/config"
-	"github.com/charmbracelet/bubbles/list"
+	"github.com/Dowdow/gosible/ui/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-type taskItem struct {
-	index int
-	title string
-	desc  string
-}
-
-func (i taskItem) Title() string       { return i.title }
-func (i taskItem) Description() string { return i.desc }
-func (i taskItem) FilterValue() string { return i.title }
 
 type tasksModel struct {
 	list list.Model
@@ -24,15 +14,14 @@ type tasksModel struct {
 
 func newTasksModel(tasks []config.Task) tasksModel {
 	items := make([]list.Item, 0)
-	for index, t := range tasks {
-		items = append(items, taskItem{
-			index: index,
-			title: t.Name,
-			desc:  fmt.Sprintf("%d actions", len(t.Actions)),
+	for _, t := range tasks {
+		items = append(items, list.Item{
+			Title: t.Name,
+			Desc:  fmt.Sprintf("%d actions", len(t.Actions)),
 		})
 	}
 
-	list := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	list := list.New(items)
 	list.Title = "Select a task to run"
 
 	return tasksModel{
@@ -41,28 +30,17 @@ func newTasksModel(tasks []config.Task) tasksModel {
 }
 
 func (m tasksModel) Init() tea.Cmd {
-	return tea.WindowSize()
+	return m.list.Init()
 }
 
 func (m tasksModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.list.SetSize(msg.Width, msg.Height)
 	case tea.KeyMsg:
-		if m.list.FilterState() == list.Filtering {
-			break
-		}
-		switch msg.String() {
-		case "q":
-			return m, tea.Quit
-		case tea.KeyEnter.String():
-			item, ok := m.list.SelectedItem().(taskItem)
-			if ok {
-				return m, func() tea.Msg {
-					return selectedTask{index: item.index}
-				}
+		switch msg.Type {
+		case tea.KeyEnter:
+			return m, func() tea.Msg {
+				return selectedTask{index: m.list.SelectedIndex()}
 			}
-			return m, tea.Quit
 		}
 	}
 

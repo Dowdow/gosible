@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 )
 
 type Config struct {
@@ -116,24 +117,24 @@ func (r *Runner) Run(ch chan tea.Msg) {
 
 		ch <- ActionStartMsg{Name: action.Name}
 
-		/*		if action.Args.Pty() {
-				modes := ssh.TerminalModes{
-					ssh.ECHO:          0,
-					ssh.ICANON:        0,
-					ssh.ISIG:          0,
-					ssh.TTY_OP_ISPEED: 14400,
-					ssh.TTY_OP_OSPEED: 14400,
-				}
+		if action.Args.Pty() {
+			modes := ssh.TerminalModes{
+				ssh.ECHO:          0,
+				ssh.ICANON:        0,
+				ssh.ISIG:          0,
+				ssh.TTY_OP_ISPEED: 14400,
+				ssh.TTY_OP_OSPEED: 14400,
+			}
 
-				fd := int(os.Stdin.Fd())
-				width, height, _ := term.GetSize(fd)
+			fd := int(os.Stdin.Fd())
+			width, height, _ := term.GetSize(fd)
 
-				if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
-					ch <- ActionEndMsg{Success: false}
-					ch <- ErrorMsg{Error: fmt.Errorf("cannot request pty : %v", err)}
-					return
-				}
-				} */
+			if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
+				ch <- ActionEndMsg{Success: false}
+				ch <- ErrorMsg{Error: fmt.Errorf("cannot request pty : %v", err)}
+				return
+			}
+		}
 
 		session.Stdin = nil
 		session.Stdout = writerStdout

@@ -65,8 +65,11 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case parsedConfigMsg:
 		if msg.err != nil {
-			m.err = msg.err
-			return m, tea.Quit
+			// Sequence quitting because of the spinner
+			return m, tea.Sequence(
+				tea.Println(PrintError(msg.err)),
+				tea.Quit,
+			)
 		}
 		m.config = msg.config
 		m.currentModel = newTasksModel(m.config.Tasks)
@@ -101,11 +104,12 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m mainModel) View() string {
+	str := m.currentModel.View()
 	if m.err != nil {
-		return PrintError(m.err)
+		str += PrintError(m.err)
 	}
 
-	return m.currentModel.View()
+	return str
 }
 
 func PrintError(err error) string {
@@ -114,5 +118,5 @@ func PrintError(err error) string {
 		Foreground(lipgloss.Color("#11111B")).
 		Background(lipgloss.Color("#F38BA8"))
 
-	return fmt.Sprintf("%s %s\n", style.Render("ERROR"), err.Error())
+	return fmt.Sprintf("%s %s", style.Render("ERROR"), err.Error())
 }

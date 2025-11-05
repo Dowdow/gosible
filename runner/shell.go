@@ -18,7 +18,5 @@ func (a ShellArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
 		return fmt.Errorf("[shell] %v\n", err)
 	}
 
-	fmt.Println("OUI")
-
 	return nil
 }

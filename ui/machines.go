@@ -5,23 +5,18 @@ import (
 	"slices"
 
 	"github.com/Dowdow/gosible/config"
-	"github.com/charmbracelet/bubbles/list"
+	"github.com/Dowdow/gosible/ui/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type machineItem struct {
+type machineUser struct {
 	machine string
 	user    string
-	title   string
-	desc    string
 }
 
-func (i machineItem) Title() string       { return i.title }
-func (i machineItem) Description() string { return i.desc }
-func (i machineItem) FilterValue() string { return i.title }
-
 type machinesModel struct {
-	list list.Model
+	list         list.Model
+	machineUsers []machineUser
 }
 
 func newMachinesModel(c *config.Config, taskIndex int) (machinesModel, error) {
@@ -32,50 +27,52 @@ func newMachinesModel(c *config.Config, taskIndex int) (machinesModel, error) {
 	task := c.Tasks[taskIndex]
 
 	items := make([]list.Item, 0)
+	machineUsers := make([]machineUser, 0)
 	for _, machine := range c.Inventory {
 		for _, user := range machine.Users {
 			if len(task.Machines) == 0 || slices.Contains(task.Machines, machine.Id) || slices.Contains(task.Machines, fmt.Sprintf("%s.%s", machine.Id, user.User)) {
-				items = append(items, machineItem{
+				items = append(items, list.Item{
+
+					Title: fmt.Sprintf("%s - %s", machine.Name, user.User),
+					Desc:  machine.Address,
+				})
+				machineUsers = append(machineUsers, machineUser{
 					machine: machine.Id,
 					user:    user.User,
-					title:   fmt.Sprintf("%s - %s", machine.Name, user.User),
-					desc:    machine.Address,
 				})
 			}
 		}
 	}
 
-	list := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	list := list.New(items)
 	list.Title = "Select a machine/user combo"
 
 	return machinesModel{
-		list: list,
+		list:         list,
+		machineUsers: machineUsers,
 	}, nil
 }
 
 func (m machinesModel) Init() tea.Cmd {
-	return tea.WindowSize()
+	return m.list.Init()
 }
 
 func (m machinesModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.list.SetSize(msg.Width, msg.Height)
 	case tea.KeyMsg:
-		if m.list.FilterState() == list.Filtering {
-			break
-		}
-		switch msg.String() {
-		case "q":
-			return m, tea.Quit
-		case tea.KeyEnter.String():
-			item, ok := m.list.SelectedItem().(machineItem)
-			if ok {
+		switch msg.Type {
+		case tea.KeyEnter:
+			index := m.list.SelectedIndex()
+			if index < 0 || index >= len(m.machineUsers) {
 				return m, func() tea.Msg {
-					return selectedMachineUser{machine: item.machine, user: item.user}
+					return errorMsg{err: fmt.Errorf("invalid machine/user combo")}
 				}
 			}
-			return m, tea.Quit
+
+			machineUser := m.machineUsers[index]
+			return m, func() tea.Msg {
+				return selectedMachineUser{machine: machineUser.machine, user: machineUser.user}
+			}
 		}
 	}
 
