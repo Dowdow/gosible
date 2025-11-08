@@ -12,11 +12,11 @@ type DirArgs struct {
 	Mod  string `json:"mod,omitempty"`
 }
 
-func (a DirArgs) Pty() bool {
+func (a *DirArgs) Validate() bool {
 	return true
 }
 
-func (a DirArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
+func (a *DirArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
 	command := fmt.Sprintf("mkdir -p %s", a.Path)
 	if a.Mod != "" {
 		command = fmt.Sprintf("%s -m %s", command, a.Mod)

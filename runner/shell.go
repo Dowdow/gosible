@@ -9,7 +9,7 @@ import (
 
 type ShellArgs string
 
-func (a ShellArgs) Pty() bool {
+func (a ShellArgs) Validate() bool {
 	return true
 }
 

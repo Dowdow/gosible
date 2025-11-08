@@ -1,12 +1,12 @@
 package runner
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 )
 
 type Config struct {
@@ -30,7 +30,7 @@ type Action struct {
 }
 
 type Args interface {
-	Pty() bool
+	Validate() bool
 	Run(session *ssh.Session, ch chan tea.Msg) error
 }
 
@@ -104,9 +104,6 @@ func (r *Runner) Run(ch chan tea.Msg) {
 	}
 	defer client.Close()
 
-	writerStdout := newTeaWriterStdout(ch)
-	writerStderr := newTeaWriterStderr(ch)
-
 	for _, action := range r.config.Actions {
 		session, err := client.NewSession()
 		if err != nil {
@@ -117,36 +114,21 @@ func (r *Runner) Run(ch chan tea.Msg) {
 
 		ch <- ActionStartMsg{Name: action.Name}
 
-		if action.Args.Pty() {
-			modes := ssh.TerminalModes{
-				ssh.ECHO:          0,
-				ssh.ICANON:        0,
-				ssh.ISIG:          0,
-				ssh.TTY_OP_ISPEED: 14400,
-				ssh.TTY_OP_OSPEED: 14400,
-			}
-
-			fd := int(os.Stdin.Fd())
-			width, height, _ := term.GetSize(fd)
-
-			if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
-				ch <- ActionEndMsg{Success: false}
-				ch <- ErrorMsg{Error: fmt.Errorf("cannot request pty : %v", err)}
-				return
-			}
-		}
-
-		session.Stdin = nil
-		session.Stdout = writerStdout
-		session.Stderr = writerStderr
+		var stdoutBuf, stderrBuf bytes.Buffer
+		session.Stdout = &stdoutBuf
+		session.Stderr = &stderrBuf
 
 		err = action.Args.Run(session, ch)
 		if err != nil {
+			ch <- StdoutMsg{Msg: stdoutBuf.String()}
+			ch <- StderrMsg{Msg: stderrBuf.String()}
 			ch <- ActionEndMsg{Success: false}
 			ch <- ErrorMsg{Error: err}
 			return
 		}
 
+		ch <- StdoutMsg{Msg: stdoutBuf.String()}
+		ch <- StderrMsg{Msg: stderrBuf.String()}
 		ch <- ActionEndMsg{Success: true}
 	}
 

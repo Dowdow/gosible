@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	titleStype = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#11111b")).Background(lipgloss.Color("#fab387")).Padding(0, 1)
+	titleStype = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#11111B")).Background(lipgloss.Color("#FAB387")).Padding(0, 1)
 	okStyle    = lipgloss.NewStyle().Bold(false).Foreground(lipgloss.Color("#11111B")).Background(lipgloss.Color("#A6E3A1"))
 	koStyle    = lipgloss.NewStyle().Bold(false).Foreground(lipgloss.Color("#11111B")).Background(lipgloss.Color("#F38BA8"))
 )
@@ -24,6 +24,8 @@ var (
 type actionView struct {
 	name   string
 	status int
+	stdout string
+	stderr string
 }
 
 type logsModel struct {
@@ -74,6 +76,8 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.actions = append(m.actions, actionView{
 			name:   msg.Name,
 			status: STATUS_PENDING,
+			stdout: "",
+			stderr: "",
 		})
 	case runner.ActionEndMsg:
 		if msg.Success {
@@ -82,9 +86,9 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.actions[len(m.actions)-1].status = STATUS_ERROR
 		}
 	case runner.StdoutMsg:
-		// fmt.Println(visualizeBytes(msg.Msg))
+		m.actions[len(m.actions)-1].stdout = msg.Msg
 	case runner.StderrMsg:
-		// fmt.Println(visualizeBytes(msg.Msg))
+		m.actions[len(m.actions)-1].stderr = msg.Msg
 	case runner.ErrorMsg:
 		close(m.ch)
 		m.actions[len(m.actions)-1].status = STATUS_ERROR
@@ -115,7 +119,13 @@ func (m logsModel) View() string {
 		case STATUS_ERROR:
 			str += koStyle.Render("KO")
 		}
+
 		str += fmt.Sprintf(" [%d/%d] %s\n", index+1, m.totalActions, action.name)
+
+		if action.status == STATUS_ERROR {
+			str += fmt.Sprintf("%s\n", action.stdout)
+			str += fmt.Sprintf("%s\n", action.stderr)
+		}
 	}
 
 	return str

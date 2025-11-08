@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/Dowdow/gosible/utils"
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
 )
@@ -14,11 +15,13 @@ type CopyArgs struct {
 	Dest string `json:"dest"`
 }
 
-func (a CopyArgs) Pty() bool {
-	return false
+func (a *CopyArgs) Validate() bool {
+	a.Src = utils.ResolvePath(a.Src)
+
+	return true
 }
 
-func (a CopyArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
+func (a *CopyArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
 	content, err := os.ReadFile(a.Src)
 	if err != nil {
 		return fmt.Errorf("[copy] %v\n", err)

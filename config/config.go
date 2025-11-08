@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/Dowdow/gosible/utils"
 )
 
 type Config struct {
@@ -31,7 +33,8 @@ func (c *Config) HasMachineUser(machineId string, userId string) bool {
 	return false
 }
 
-func (c *Config) ValidateIds() error {
+func (c *Config) Validate() error {
+	// Create all machine.user combo
 	machineUserIds := []string{}
 	for _, machine := range c.Inventory {
 		machineUserIds = append(machineUserIds, machine.Id)
@@ -42,10 +45,16 @@ func (c *Config) ValidateIds() error {
 
 	actionIds := []string{}
 	for _, action := range c.Actions {
+		// Validate args
+		if !action.Args.Validate() {
+			return fmt.Errorf("action args are not valid: %s", action.Id)
+		}
+
 		actionIds = append(actionIds, action.Id)
 	}
 
 	for _, task := range c.Tasks {
+		// Check machine.user combo
 		for _, machine := range task.Machines {
 			if !slices.Contains(machineUserIds, string(machine)) {
 				if strings.Contains(string(machine), ".") {
@@ -56,8 +65,14 @@ func (c *Config) ValidateIds() error {
 		}
 
 		for _, action := range task.Actions {
+			// Check action ids
 			if action.Id != "" && !slices.Contains(actionIds, action.Id) {
 				return fmt.Errorf("action id not found: %s", action.Id)
+			}
+
+			// Validate args
+			if action.Id == "" && !action.Args.Validate() {
+				return fmt.Errorf("action args are not valid: %s : %s", task.Name, action.Name)
 			}
 		}
 	}
@@ -94,7 +109,9 @@ func ParseConfig() (*Config, error) {
 		return nil, fmt.Errorf("cannot unmarshall the config file: %v", err)
 	}
 
-	err = c.ValidateIds()
+	utils.SetConfigDir(configFilePath)
+
+	err = c.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("the ids are not corrects: %v", err)
 	}
