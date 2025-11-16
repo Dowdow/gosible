@@ -30,7 +30,7 @@ type Action struct {
 }
 
 type Args interface {
-	Validate() bool
+	Validate() error
 	Run(session *ssh.Session, ch chan tea.Msg) error
 }
 

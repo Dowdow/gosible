@@ -12,8 +12,8 @@ type DirArgs struct {
 	Mod  string `json:"mod,omitempty"`
 }
 
-func (a *DirArgs) Validate() bool {
-	return true
+func (a *DirArgs) Validate() error {
+	return nil
 }
 
 func (a *DirArgs) Run(session *ssh.Session, ch chan tea.Msg) error {

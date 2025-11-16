@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Dowdow/gosible/env"
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
 )
@@ -14,8 +15,11 @@ type FileArgs struct {
 	Content []string `json:"content"`
 }
 
-func (a *FileArgs) Validate() bool {
-	return true
+func (a *FileArgs) Validate() error {
+	for index, line := range a.Content {
+		a.Content[index] = env.ReplaceEnv(line)
+	}
+	return nil
 }
 
 func (a *FileArgs) Run(session *ssh.Session, ch chan tea.Msg) error {

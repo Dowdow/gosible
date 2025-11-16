@@ -18,10 +18,9 @@ type CopyArgs struct {
 	Dest string `json:"dest"`
 }
 
-func (a *CopyArgs) Validate() bool {
+func (a *CopyArgs) Validate() error {
 	a.Src = utils.ResolvePath(a.Src)
-
-	return true
+	return nil
 }
 
 func (a *CopyArgs) Run(session *ssh.Session, ch chan tea.Msg) error {

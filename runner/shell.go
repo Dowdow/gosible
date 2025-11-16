@@ -9,8 +9,8 @@ import (
 
 type ShellArgs string
 
-func (a ShellArgs) Validate() bool {
-	return true
+func (a ShellArgs) Validate() error {
+	return nil
 }
 
 func (a ShellArgs) Run(session *ssh.Session, ch chan tea.Msg) error {

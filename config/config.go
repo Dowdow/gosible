@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Dowdow/gosible/env"
 	"github.com/Dowdow/gosible/utils"
 )
 
@@ -46,7 +47,8 @@ func (c *Config) Validate() error {
 	actionIds := []string{}
 	for _, action := range c.Actions {
 		// Validate args
-		if !action.Args.Validate() {
+		err := action.Args.Validate()
+		if err != nil {
 			return fmt.Errorf("action args are not valid: %s", action.Id)
 		}
 
@@ -71,8 +73,11 @@ func (c *Config) Validate() error {
 			}
 
 			// Validate args
-			if action.Id == "" && !action.Args.Validate() {
-				return fmt.Errorf("action args are not valid: %s : %s", task.Name, action.Name)
+			if action.Id == "" {
+				err := action.Args.Validate()
+				if err != nil {
+					return fmt.Errorf("action args are not valid: %s : %s", task.Name, action.Name)
+				}
 			}
 		}
 	}
@@ -111,9 +116,14 @@ func ParseConfig() (*Config, error) {
 
 	utils.SetConfigDir(configFilePath)
 
+	err = env.ParseEnv(utils.ResolvePath(".env"))
+	if err != nil {
+		return nil, fmt.Errorf("dotenv: %v", err)
+	}
+
 	err = c.Validate()
 	if err != nil {
-		return nil, fmt.Errorf("the ids are not corrects: %v", err)
+		return nil, fmt.Errorf("validation: %v", err)
 	}
 
 	return &c, nil
