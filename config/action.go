@@ -16,13 +16,15 @@ type Action struct {
 
 func (a *Action) argsFactory() (runner.Args, error) {
 	switch a.Type {
-	case "shell":
-		var s runner.ShellArgs = ""
-		return &s, nil
 	case "copy":
 		return &runner.CopyArgs{}, nil
 	case "dir":
 		return &runner.DirArgs{}, nil
+	case "file":
+		return &runner.FileArgs{}, nil
+	case "shell":
+		var s runner.ShellArgs = ""
+		return &s, nil
 	}
 
 	return nil, fmt.Errorf("Unknown type: %s", a.Type)
