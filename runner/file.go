@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Dowdow/gosible/env"
-	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -22,7 +21,7 @@ func (a *FileArgs) Validate() error {
 	return nil
 }
 
-func (a *FileArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
+func (a *FileArgs) Run(session *ssh.Session) error {
 	file, err := os.CreateTemp("", "gosible-*")
 	if err != nil {
 		return fmt.Errorf("[file] %v\n", err)
@@ -39,7 +38,6 @@ func (a *FileArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
 		Src:  file.Name(),
 		Dest: a.Dest,
 	}
-
 	copy.Validate()
-	return copy.Run(session, ch)
+	return copy.Run(session)
 }

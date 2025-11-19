@@ -3,7 +3,6 @@ package runner
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -16,7 +15,7 @@ func (a *DirArgs) Validate() error {
 	return nil
 }
 
-func (a *DirArgs) Run(session *ssh.Session, ch chan tea.Msg) error {
+func (a *DirArgs) Run(session *ssh.Session) error {
 	command := fmt.Sprintf("mkdir -p %s", a.Path)
 	if a.Mod != "" {
 		command = fmt.Sprintf("%s -m %s", command, a.Mod)

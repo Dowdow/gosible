@@ -20,6 +20,8 @@ func (a *Action) argsFactory() (runner.Args, error) {
 		return &runner.CopyArgs{}, nil
 	case "dir":
 		return &runner.DirArgs{}, nil
+	case "docker":
+		return &runner.DockerArgs{}, nil
 	case "file":
 		return &runner.FileArgs{}, nil
 	case "shell":

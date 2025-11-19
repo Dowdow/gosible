@@ -31,7 +31,7 @@ type Action struct {
 
 type Args interface {
 	Validate() error
-	Run(session *ssh.Session, ch chan tea.Msg) error
+	Run(session *ssh.Session) error
 }
 
 type ActionStartMsg struct {
@@ -118,7 +118,7 @@ func (r *Runner) Run(ch chan tea.Msg) {
 		session.Stdout = &stdoutBuf
 		session.Stderr = &stderrBuf
 
-		err = action.Args.Run(session, ch)
+		err = action.Args.Run(session)
 		if err != nil {
 			ch <- StdoutMsg{Msg: stdoutBuf.String()}
 			ch <- StderrMsg{Msg: stderrBuf.String()}
