@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Dowdow/gosible/config"
-	"github.com/Dowdow/gosible/converter"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -86,7 +85,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case selectedMachineUser:
 		m.machine = msg.machine
 		m.user = msg.user
-		runnerConfig, err := converter.ConvertConfig(m.config, m.taskIndex, m.machine, m.user)
+		runnerConfig, err := m.config.Convert(m.taskIndex, m.machine, m.user)
 		if err != nil {
 			m.err = err
 			return m, tea.Quit
