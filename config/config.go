@@ -42,6 +42,10 @@ func (c *Config) Validate() error {
 		machineUserIds = append(machineUserIds, machine.Id)
 		for _, user := range machine.Users {
 			machineUserIds = append(machineUserIds, fmt.Sprintf("%s.%s", machine.Id, user.User))
+			err := user.Validate()
+			if err != nil {
+				return fmt.Errorf("invalid user %s: %v", user.User, err)
+			}
 		}
 	}
 

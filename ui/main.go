@@ -26,6 +26,8 @@ type selectedMachineUser struct {
 	user    string
 }
 
+type taskDoneMsg struct{}
+
 type mainModel struct {
 	config       *config.Config
 	taskIndex    int
@@ -91,6 +93,9 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		m.currentModel = newLogsModel(runnerConfig)
+		return m, m.currentModel.Init()
+	case taskDoneMsg:
+		m.currentModel = newTasksModel(m.config.Tasks)
 		return m, m.currentModel.Init()
 	case errorMsg:
 		m.err = msg.err

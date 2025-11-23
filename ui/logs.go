@@ -34,6 +34,8 @@ type logsModel struct {
 	actions      []actionView
 	totalActions int
 	spinner      spinner.Model
+	showStd      bool
+	done         bool
 }
 
 func newLogsModel(config *runner.Config) logsModel {
@@ -46,6 +48,8 @@ func newLogsModel(config *runner.Config) logsModel {
 		actions:      make([]actionView, 0),
 		totalActions: len(config.Actions),
 		spinner:      s,
+		showStd:      false,
+		done:         false,
 	}
 }
 
@@ -72,6 +76,15 @@ func (m logsModel) Init() tea.Cmd {
 
 func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyTab:
+			m.showStd = !m.showStd
+		case tea.KeyEnter:
+			return m, func() tea.Msg {
+				return taskDoneMsg{}
+			}
+		}
 	case runner.ActionStartMsg:
 		m.actions = append(m.actions, actionView{
 			name:   msg.Name,
@@ -97,7 +110,8 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case runner.EndMsg:
 		close(m.ch)
-		return m, tea.Quit
+		m.done = true
+		return m, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -108,7 +122,14 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m logsModel) View() string {
-	str := fmt.Sprintf("%s\n\n", titleStype.Render("Executing"))
+	str := fmt.Sprintf("%s ", titleStype.Render("Executing"))
+
+	if m.showStd {
+		str += titleStype.Padding(0, 0).Render("TAB")
+	} else {
+		str += "TAB"
+	}
+	str += " to show outputs\n\n"
 
 	for index, action := range m.actions {
 		switch action.status {
@@ -122,10 +143,23 @@ func (m logsModel) View() string {
 
 		str += fmt.Sprintf(" [%d/%d] %s\n", index+1, m.totalActions, action.name)
 
-		if action.status == STATUS_ERROR {
+		if m.showStd || action.status == STATUS_ERROR {
 			str += fmt.Sprintf("%s\n", action.stdout)
 			str += fmt.Sprintf("%s\n", action.stderr)
 		}
+	}
+
+	if m.done {
+		str += "\n"
+
+		lastActionStatus := m.actions[len(m.actions)-1].status
+		if lastActionStatus == STATUS_SUCCESS {
+			str += okStyle.Render("DONE")
+		} else {
+			str += koStyle.Render("DONE")
+		}
+
+		str += " Press ENTER to continue or ESC to exit"
 	}
 
 	return str

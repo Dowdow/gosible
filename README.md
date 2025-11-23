@@ -61,7 +61,10 @@ If a `.env` file exists, it will be parsed and variables can be used in strings 
           "user": "docker", // the actual user
           "ssh": "/home/user/.ssh/id_rsa", // the private ssh key...
           "password": "pass123", // ... or the user password
-          "become": "pass456" // sudo password for privileged usage
+          "become": "pass456", // sudo password for privileged usage
+          // or
+          "password": "env(PASSWORD)",
+          "become": "env(SUDO_PASSWORD)",
         },
         // More users here
       ]
@@ -107,8 +110,7 @@ List of modules to use in actions.
 
 #### copy
 
-Copy a file or a directory recursively to the machine.  
-If `src` is relative, it will be from the config file path.
+Copy a file or a directory recursively to the machine. If `src` is relative, it will be from the config file path.
 
 ```jsonc
 {
@@ -161,7 +163,7 @@ Docker builds a `docker` image, saves it as a `.tar` file, and uploads it to the
 
 Generate a file on the machine. `content` is an array and each element is a line in the file.
 
-In this example, it generates a `.env` file, and the `env(ENV_VAR)` can be used.
+In this example, it generates a `.env` file, and the `env(ENV_VAR)` syntax can be used.
 
 ```jsonc
 {
