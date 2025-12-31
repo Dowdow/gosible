@@ -31,7 +31,7 @@ make clean # Remove build/gosible
 git clone https://github.com/Dowdow/gosible.git
 cd gosible
 go mod download
-go run . config.json
+go run ./cmd/main.go config.json
 ```
 
 ## Usage
@@ -154,6 +154,7 @@ Docker builds a `docker` image, saves it as a `.tar` file, and uploads it to the
     "dest": "/path/to/the/image", // must be a directory
     "image": "image:latest", // docker image name
     "tar": "image-latest.tar", // tar filename
+    "pull": true, // always attempt to pull a newer version of the image 
     "clean": true // remove the local .tar file
   }
 },

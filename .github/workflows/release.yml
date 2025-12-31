@@ -27,10 +27,10 @@ jobs:
           cache: true
 
       - name: "Install dependencies"
-        run: go get .
+        run: go mod download
 
       - name: "Build"
-        run: go build -ldflags="-s -w" -o gosible
+        run: go build -ldflags="-s -w" -o gosible ./cmd/main.go
 
       - name: "Create Release"
         uses: "softprops/action-gh-release@v2"

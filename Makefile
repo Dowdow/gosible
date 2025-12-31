@@ -10,7 +10,7 @@ all: build
 build:
 	@echo "Compiling $(APP_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	@CGO_ENABLED=0 go build -ldflags="-s -w" -o $(BINARY) .
+	@CGO_ENABLED=0 go build -ldflags="-s -w" -o $(BINARY) ./cmd/main.go
 	@echo "Binary created: $(BINARY)"
 
 install: build

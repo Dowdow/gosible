@@ -15,6 +15,7 @@ type DockerArgs struct {
 	Dest  string `json:"dest"`
 	Image string `json:"image"`
 	Tar   string `json:"tar,omitempty"`
+	Pull  bool   `json:"pull,omitempty"`
 	Clean bool   `json:"clean,omitempty"`
 }
 
@@ -45,7 +46,12 @@ func (a *DockerArgs) Run(session *ssh.Session) error {
 		}()
 	}
 
-	buildCmd := exec.Command("docker", "build", "-t", a.Image, a.Src)
+	args := []string{"build", "-t", a.Image, a.Src}
+	if a.Pull {
+		args = append(args, "--pull")
+	}
+
+	buildCmd := exec.Command("docker", args...)
 	if err := buildCmd.Run(); err != nil {
 		return fmt.Errorf("[docker] %v\n", err)
 	}
