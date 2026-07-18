@@ -14,7 +14,6 @@ type EnvVar struct {
 }
 
 func (c *Config) ParseEnv(filename string) error {
-	// Exit if no file
 	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
