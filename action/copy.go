@@ -11,8 +11,8 @@ import (
 )
 
 type CopyArgs struct {
-	Src  string `json:"src"`
-	Dest string `json:"dest"`
+	Src  string `yaml:"src"`
+	Dest string `yaml:"dest"`
 }
 
 func (a *CopyArgs) Validate() error {

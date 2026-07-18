@@ -11,7 +11,7 @@ import (
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		fmt.Println("Usage: gosible <config.json>")
+		fmt.Println("Usage: gosible <config.yaml>")
 		return
 	}
 

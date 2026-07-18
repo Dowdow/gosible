@@ -3,8 +3,8 @@ package action
 import "fmt"
 
 type DirArgs struct {
-	Path string `json:"path"`
-	Mod  string `json:"mod,omitempty"`
+	Path string `yaml:"path"`
+	Mod  string `yaml:"mod"`
 }
 
 func (a *DirArgs) Validate() error {

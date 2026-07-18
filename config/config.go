@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/Dowdow/gosible/runner"
+	yaml "github.com/goccy/go-yaml"
 )
 
 type Config struct {
-	Inventory []Machine `json:"inventory"`
-	Actions   []Action  `json:"actions"`
-	Tasks     []Task    `json:"tasks"`
+	Inventory []Machine `yaml:"inventory"`
+	Actions   []Action  `yaml:"actions"`
+	Tasks     []Task    `yaml:"tasks"`
 	configDir string
 	envVars   []EnvVar
 }
@@ -168,8 +168,8 @@ func ParseConfig() (*Config, error) {
 	}
 
 	extension := filepath.Ext(configFilePath)
-	if extension != ".json" {
-		return nil, fmt.Errorf("%s is not a JSON file (.json)", configFilePath)
+	if extension != ".yaml" && extension != ".yml" {
+		return nil, fmt.Errorf("%s is not a YAML file (.yaml/.yml)", configFilePath)
 	}
 
 	configData, err := os.ReadFile(configFilePath)
@@ -178,7 +178,7 @@ func ParseConfig() (*Config, error) {
 	}
 
 	var c = Config{}
-	err = json.Unmarshal(configData, &c)
+	err = yaml.Unmarshal(configData, &c)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshall the config file: %v", err)
 	}

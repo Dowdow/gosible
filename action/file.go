@@ -7,8 +7,8 @@ import (
 )
 
 type FileArgs struct {
-	Dest    string   `json:"dest"`
-	Content []string `json:"content"`
+	Dest    string   `yaml:"dest"`
+	Content []string `yaml:"content"`
 }
 
 func (a *FileArgs) Validate() error {

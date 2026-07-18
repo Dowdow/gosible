@@ -8,11 +8,11 @@ The architecture is actively evolving. Whenever a change alters package boundari
 
 ## What this is
 
-gosible is a terminal (bubbletea) reinterpretation of Ansible for homelab management, driven by a single JSON config file passed as an argument (`gosible config.json`).
+gosible is a terminal (bubbletea) reinterpretation of Ansible for homelab management, driven by a single YAML config file passed as an argument (`gosible config.yaml`). Config parsing uses `github.com/goccy/go-yaml`, not `encoding/json`.
 
 ## Architecture (strict layering — respect the dependency direction)
 
-- `config` — JSON parsing, validation, `env(VAR)`/relative-path resolution. Imports `action` and `runner`.
+- `config` — YAML parsing, validation, `env(VAR)`/relative-path resolution. Imports `action` and `runner`. `Action.UnmarshalYAML` decodes `Args` polymorphically based on `Type` — it can't use the usual `type Alias T; struct{ *Alias }` trick to avoid recursion, because goccy/go-yaml (unlike encoding/json) doesn't promote fields from an embedded struct during decode; it decodes into a fully separate anonymous struct instead.
 - `action` — the `Args` interface (`Validate`, `Prepare`, `Run`) and each action type (copy, dir, docker, file, shell). Must not import `config`: `config` already imports `action`, so a reverse import creates a cycle. Context-dependent resolution (paths, env vars) is threaded in as plain functions via `Prepare(resolvePath, replaceEnv func(string) string)`, not by depending on `config.Config` directly.
 - `runner` — SSH orchestration only (`Runner`, `Machine`, `sshExecutor`). Implements `action.Executor` on top of `ssh.Session`. Emits its own `runner.Event` types over a channel and must not import `bubbletea`; `ui` is responsible for translating events into `tea.Msg`.
 - `ui` — the bubbletea TUI (tasks → machines → logs screens).
@@ -21,7 +21,7 @@ gosible is a terminal (bubbletea) reinterpretation of Ansible for homelab manage
 
 ## Commands
 
-- Build: `make build` (binary at `build/gosible`), or `go run ./cmd/main.go config.json` for local dev.
+- Build: `make build` (binary at `build/gosible`), or `go run ./cmd/main.go config.yaml` for local dev.
 - Test: `go test ./...` (add `-race` for the full suite). No external tools/services needed: `action`/`config` tests use in-memory fakes, and `runner` tests spin up a pure-Go in-process fake SSH server (`runner/testserver_test.go`) instead of a real sshd.
 - Before considering work done: `go vet ./...` and `gofmt -l .` should both be clean.
 

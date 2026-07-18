@@ -8,12 +8,12 @@ import (
 )
 
 type DockerArgs struct {
-	Src   string `json:"src"`
-	Dest  string `json:"dest"`
-	Image string `json:"image"`
-	Tar   string `json:"tar,omitempty"`
-	Pull  bool   `json:"pull,omitempty"`
-	Clean bool   `json:"clean,omitempty"`
+	Src   string `yaml:"src"`
+	Dest  string `yaml:"dest"`
+	Image string `yaml:"image"`
+	Tar   string `yaml:"tar"`
+	Pull  bool   `yaml:"pull"`
+	Clean bool   `yaml:"clean"`
 }
 
 func (a *DockerArgs) Validate() error {

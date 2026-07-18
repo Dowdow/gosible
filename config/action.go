@@ -1,17 +1,17 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/Dowdow/gosible/action"
+	yaml "github.com/goccy/go-yaml"
 )
 
 type Action struct {
-	Id   string      `json:"id"`
-	Name string      `json:"name"`
-	Type string      `json:"type"`
-	Args action.Args `json:"-"`
+	Id   string      `yaml:"id"`
+	Name string      `yaml:"name"`
+	Type string      `yaml:"type"`
+	Args action.Args `yaml:"-"`
 }
 
 func (a *Action) argsFactory() (action.Args, error) {
@@ -32,22 +32,21 @@ func (a *Action) argsFactory() (action.Args, error) {
 	return nil, fmt.Errorf("Unknown type: %s", a.Type)
 }
 
-func (a *Action) UnmarshalJSON(data []byte) error {
-	type Alias Action
-	alias := &struct {
-		Args json.RawMessage `json:"args"`
-		*Alias
-	}{
-		Alias: (*Alias)(a),
+func (a *Action) UnmarshalYAML(data []byte) error {
+	var raw struct {
+		Id   string          `yaml:"id"`
+		Name string          `yaml:"name"`
+		Type string          `yaml:"type"`
+		Args yaml.RawMessage `yaml:"args"`
 	}
 
-	if err := json.Unmarshal(data, alias); err != nil {
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 
-	a.Id = alias.Id
-	a.Name = alias.Name
-	a.Type = alias.Type
+	a.Id = raw.Id
+	a.Name = raw.Name
+	a.Type = raw.Type
 	a.Args = nil
 
 	if a.Type == "" {
@@ -59,7 +58,7 @@ func (a *Action) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if err := json.Unmarshal(alias.Args, args); err != nil {
+	if err := yaml.Unmarshal(raw.Args, args); err != nil {
 		return err
 	}
 

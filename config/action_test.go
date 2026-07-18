@@ -1,15 +1,15 @@
 package config
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/Dowdow/gosible/action"
+	yaml "github.com/goccy/go-yaml"
 )
 
 func TestActionUnmarshalShell(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"name":"n","type":"shell","args":"echo hi"}`), &a); err != nil {
+	if err := yaml.Unmarshal([]byte("name: n\ntype: shell\nargs: echo hi\n"), &a); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -24,7 +24,8 @@ func TestActionUnmarshalShell(t *testing.T) {
 
 func TestActionUnmarshalCopy(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"type":"copy","args":{"src":"a","dest":"b"}}`), &a); err != nil {
+	doc := "type: copy\nargs:\n  src: a\n  dest: b\n"
+	if err := yaml.Unmarshal([]byte(doc), &a); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -39,7 +40,8 @@ func TestActionUnmarshalCopy(t *testing.T) {
 
 func TestActionUnmarshalDir(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"type":"dir","args":{"path":"/tmp/x","mod":"755"}}`), &a); err != nil {
+	doc := "type: dir\nargs:\n  path: /tmp/x\n  mod: \"755\"\n"
+	if err := yaml.Unmarshal([]byte(doc), &a); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -54,7 +56,8 @@ func TestActionUnmarshalDir(t *testing.T) {
 
 func TestActionUnmarshalDocker(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"type":"docker","args":{"src":"./img","dest":"/x","image":"img:latest"}}`), &a); err != nil {
+	doc := "type: docker\nargs:\n  src: ./img\n  dest: /x\n  image: img:latest\n"
+	if err := yaml.Unmarshal([]byte(doc), &a); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -69,7 +72,8 @@ func TestActionUnmarshalDocker(t *testing.T) {
 
 func TestActionUnmarshalFile(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"type":"file","args":{"dest":"/x","content":["a","b"]}}`), &a); err != nil {
+	doc := "type: file\nargs:\n  dest: /x\n  content:\n    - a\n    - b\n"
+	if err := yaml.Unmarshal([]byte(doc), &a); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -84,14 +88,14 @@ func TestActionUnmarshalFile(t *testing.T) {
 
 func TestActionUnmarshalUnknownType(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"type":"bogus"}`), &a); err == nil {
+	if err := yaml.Unmarshal([]byte("type: bogus\n"), &a); err == nil {
 		t.Fatal("expected an error for an unknown action type")
 	}
 }
 
 func TestActionUnmarshalIdOnlyReference(t *testing.T) {
 	var a Action
-	if err := json.Unmarshal([]byte(`{"id":"shared-action"}`), &a); err != nil {
+	if err := yaml.Unmarshal([]byte("id: shared-action\n"), &a); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if a.Args != nil {

@@ -1,7 +1,7 @@
 package config
 
 type Task struct {
-	Name     string   `json:"name"`
-	Machines []string `json:"machines"`
-	Actions  []Action `json:"actions"`
+	Name     string   `yaml:"name"`
+	Machines []string `yaml:"machines"`
+	Actions  []Action `yaml:"actions"`
 }

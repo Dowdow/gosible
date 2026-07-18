@@ -1,8 +1,8 @@
 package config
 
 type Machine struct {
-	Id      string `json:"id"`
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Users   []User `json:"users"`
+	Id      string `yaml:"id"`
+	Name    string `yaml:"name"`
+	Address string `yaml:"address"`
+	Users   []User `yaml:"users"`
 }
