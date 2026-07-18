@@ -1,10 +1,14 @@
 # gosible
 
+[![Tests](https://github.com/Dowdow/gosible/actions/workflows/test.yml/badge.svg)](https://github.com/Dowdow/gosible/actions/workflows/test.yml)
+
 A reinterpretation of Ansible in Go for managing homeservers with a simple yaml configuration.
 
 Under development. Only tested on Linux.
 
-![Gif example](https://github.com/Dowdow/gosible/blob/main/demo.gif?raw=true)
+![Gif example](https://github.com/Dowdow/gosible/blob/main/demo/demo.gif?raw=true)
+
+Regenerate it with `./demo/record.sh` (requires [vhs](https://github.com/charmbracelet/vhs)) — it runs against the fixtures in `demo/`, not a real machine.
 
 ## Installation
 

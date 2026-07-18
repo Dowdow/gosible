@@ -1,0 +1,46 @@
+inventory:
+  - id: nas
+    name: NAS
+    address: "127.0.0.1:2244"
+    users:
+      - user: docker
+        password: demo
+  - id: web
+    name: Web Server
+    address: "127.0.0.1:2244"
+    users:
+      - user: docker
+        password: demo
+
+actions:
+  - id: check.disk
+    name: Check disk usage
+    type: shell
+    args: df -h
+
+tasks:
+  - name: Update docker containers
+    actions:
+      - id: check.disk
+      - name: Pull latest images
+        type: shell
+        args: docker compose pull
+      - name: Restart containers
+        type: shell
+        args: docker compose up -d
+
+  - name: Backup configuration
+    actions:
+      - name: Create backup archive
+        type: shell
+        args: tar -czf backup.tar.gz /etc/docker
+      - name: Upload to remote storage
+        type: shell
+        args: rclone copy backup.tar.gz remote:backups
+
+  - name: Renew certificates
+    actions:
+      - id: check.disk
+      - name: Renew TLS certificate
+        type: shell
+        args: certbot renew
