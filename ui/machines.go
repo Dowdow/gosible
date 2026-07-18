@@ -5,7 +5,8 @@ import (
 	"slices"
 
 	"github.com/Dowdow/gosible/config"
-	"github.com/Dowdow/gosible/ui/list"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -31,10 +32,9 @@ func newMachinesModel(c *config.Config, taskIndex int) (machinesModel, error) {
 	for _, machine := range c.Inventory {
 		for _, user := range machine.Users {
 			if len(task.Machines) == 0 || slices.Contains(task.Machines, machine.Id) || slices.Contains(task.Machines, fmt.Sprintf("%s.%s", machine.Id, user.User)) {
-				items = append(items, list.Item{
-
-					Title: fmt.Sprintf("%s - %s", machine.Name, user.User),
-					Desc:  machine.Address,
+				items = append(items, simpleItem{
+					title: fmt.Sprintf("%s - %s", machine.Name, user.User),
+					desc:  machine.Address,
 				})
 				machineUsers = append(machineUsers, machineUser{
 					machine: machine.Id,
@@ -44,34 +44,47 @@ func newMachinesModel(c *config.Config, taskIndex int) (machinesModel, error) {
 		}
 	}
 
-	list := list.New(items)
-	list.Title = "Select a machine/user combo"
+	l := newList(items, "Select a machine/user combo")
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+			key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
+		}
+	}
 
 	return machinesModel{
-		list:         list,
+		list:         l,
 		machineUsers: machineUsers,
 	}, nil
 }
 
 func (m machinesModel) Init() tea.Cmd {
-	return m.list.Init()
+	return tea.WindowSize()
 }
 
 func (m machinesModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.list.SetSize(msg.Width, msg.Height)
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEnter:
-			index := m.list.SelectedIndex()
-			if index < 0 || index >= len(m.machineUsers) {
-				return m, func() tea.Msg {
-					return errorMsg{err: fmt.Errorf("invalid machine/user combo")}
+		if !m.list.SettingFilter() {
+			switch msg.String() {
+			case "enter":
+				index := m.list.GlobalIndex()
+				if index < 0 || index >= len(m.machineUsers) {
+					return m, func() tea.Msg {
+						return errorMsg{err: fmt.Errorf("invalid machine/user combo")}
+					}
 				}
-			}
 
-			machineUser := m.machineUsers[index]
-			return m, func() tea.Msg {
-				return selectedMachineUser{machine: machineUser.machine, user: machineUser.user}
+				mu := m.machineUsers[index]
+				return m, func() tea.Msg {
+					return selectedMachineUser{machine: mu.machine, user: mu.user}
+				}
+			case "esc":
+				return m, func() tea.Msg {
+					return backToTasksMsg{}
+				}
 			}
 		}
 	}

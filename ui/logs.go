@@ -7,19 +7,12 @@ import (
 	"github.com/Dowdow/gosible/runner"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 const (
 	STATUS_SUCCESS = 0
 	STATUS_ERROR   = 1
 	STATUS_PENDING = 2
-)
-
-var (
-	titleStype = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#11111B")).Background(lipgloss.Color("#FAB387")).Padding(0, 1)
-	okStyle    = lipgloss.NewStyle().Bold(false).Foreground(lipgloss.Color("#11111B")).Background(lipgloss.Color("#A6E3A1"))
-	koStyle    = lipgloss.NewStyle().Bold(false).Foreground(lipgloss.Color("#11111B")).Background(lipgloss.Color("#F38BA8"))
 )
 
 type actionView struct {
@@ -46,7 +39,8 @@ type logsModel struct {
 func newLogsModel(config *runner.Config) logsModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#B4BEFE"))
+	s.Style = spinnerStyle
+
 	return logsModel{
 		runner:       runner.NewRunner(config),
 		ch:           make(chan runner.Event),
@@ -82,14 +76,18 @@ func (m logsModel) Init() tea.Cmd {
 func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyTab:
+		switch msg.String() {
+		case "tab":
 			m.showStd = !m.showStd
-		case tea.KeyEnter:
+		case "enter":
 			if m.done {
 				return m, func() tea.Msg {
 					return taskDoneMsg{}
 				}
+			}
+		case "q":
+			if m.done {
+				return m, tea.Quit
 			}
 		}
 	case runnerEventMsg:
@@ -98,8 +96,6 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.actions = append(m.actions, actionView{
 				name:   event.Name,
 				status: STATUS_PENDING,
-				stdout: "",
-				stderr: "",
 			})
 		case runner.ActionCompleted:
 			last := &m.actions[len(m.actions)-1]
@@ -131,10 +127,10 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m logsModel) View() string {
 	var str strings.Builder
-	fmt.Fprintf(&str, "%s ", titleStype.Render("Executing"))
+	fmt.Fprintf(&str, "%s ", titleStyle.Render("Executing"))
 
 	if m.showStd {
-		str.WriteString(titleStype.Padding(0, 0).Render("TAB"))
+		str.WriteString(titleStyle.Padding(0, 0).Render("TAB"))
 	} else {
 		str.WriteString("TAB")
 	}
@@ -168,7 +164,7 @@ func (m logsModel) View() string {
 			str.WriteString(koStyle.Render("DONE"))
 		}
 
-		str.WriteString(" Press ENTER to continue or ESC to exit")
+		str.WriteString(" Press ENTER to continue or Q to quit")
 	}
 
 	return str.String()

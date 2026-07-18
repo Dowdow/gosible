@@ -4,42 +4,62 @@ import (
 	"fmt"
 
 	"github.com/Dowdow/gosible/config"
-	"github.com/Dowdow/gosible/ui/list"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type tasksModel struct {
-	list list.Model
+	list  list.Model
+	tasks []config.Task
 }
 
-func newTasksModel(tasks []config.Task) tasksModel {
-	items := make([]list.Item, 0)
-	for _, t := range tasks {
-		items = append(items, list.Item{
-			Title: t.Name,
-			Desc:  fmt.Sprintf("%d actions", len(t.Actions)),
+func newTasksModel(c *config.Config) tasksModel {
+	items := make([]list.Item, 0, len(c.Tasks))
+	for _, t := range c.Tasks {
+		items = append(items, simpleItem{
+			title: t.Name,
+			desc:  fmt.Sprintf("%d actions", len(t.Actions)),
 		})
 	}
 
-	list := list.New(items)
-	list.Title = "Select a task to run"
+	l := newList(items, "Select a task to run")
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	return tasksModel{
-		list: list,
+		list:  l,
+		tasks: c.Tasks,
 	}
 }
 
 func (m tasksModel) Init() tea.Cmd {
-	return m.list.Init()
+	return tea.WindowSize()
 }
 
 func (m tasksModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.list.SetSize(msg.Width, msg.Height)
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEnter:
-			return m, func() tea.Msg {
-				return selectedTask{index: m.list.SelectedIndex()}
+		if !m.list.SettingFilter() {
+			switch msg.String() {
+			case "enter":
+				index := m.list.GlobalIndex()
+				if index < 0 || index >= len(m.tasks) {
+					return m, func() tea.Msg {
+						return errorMsg{err: fmt.Errorf("invalid task")}
+					}
+				}
+
+				return m, func() tea.Msg {
+					return selectedTask{index: index}
+				}
+			case "esc":
+				return m, tea.Quit
 			}
 		}
 	}

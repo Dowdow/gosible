@@ -5,7 +5,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type loadingModel struct {
@@ -15,7 +14,7 @@ type loadingModel struct {
 func newLoadingModel() loadingModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#B4BEFE"))
+	s.Style = spinnerStyle
 	return loadingModel{spinner: s}
 }
 
