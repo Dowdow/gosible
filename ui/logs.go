@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Dowdow/gosible/runner"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -28,9 +29,13 @@ type actionView struct {
 	stderr string
 }
 
+type runnerEventMsg struct {
+	event runner.Event
+}
+
 type logsModel struct {
 	runner       *runner.Runner
-	ch           chan tea.Msg
+	ch           chan runner.Event
 	actions      []actionView
 	totalActions int
 	spinner      spinner.Model
@@ -44,7 +49,7 @@ func newLogsModel(config *runner.Config) logsModel {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#B4BEFE"))
 	return logsModel{
 		runner:       runner.NewRunner(config),
-		ch:           make(chan tea.Msg),
+		ch:           make(chan runner.Event),
 		actions:      make([]actionView, 0),
 		totalActions: len(config.Actions),
 		spinner:      s,
@@ -53,13 +58,13 @@ func newLogsModel(config *runner.Config) logsModel {
 	}
 }
 
-func read(ch chan tea.Msg) tea.Cmd {
+func read(ch chan runner.Event) tea.Cmd {
 	return func() tea.Msg {
-		msg, ok := <-ch
+		event, ok := <-ch
 		if !ok {
 			return nil
 		}
-		return msg
+		return runnerEventMsg{event: event}
 	}
 }
 
@@ -81,37 +86,40 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyTab:
 			m.showStd = !m.showStd
 		case tea.KeyEnter:
-			return m, func() tea.Msg {
-				return taskDoneMsg{}
+			if m.done {
+				return m, func() tea.Msg {
+					return taskDoneMsg{}
+				}
 			}
 		}
-	case runner.ActionStartMsg:
-		m.actions = append(m.actions, actionView{
-			name:   msg.Name,
-			status: STATUS_PENDING,
-			stdout: "",
-			stderr: "",
-		})
-	case runner.ActionEndMsg:
-		if msg.Success {
-			m.actions[len(m.actions)-1].status = STATUS_SUCCESS
-		} else {
-			m.actions[len(m.actions)-1].status = STATUS_ERROR
+	case runnerEventMsg:
+		switch event := msg.event.(type) {
+		case runner.ActionStarted:
+			m.actions = append(m.actions, actionView{
+				name:   event.Name,
+				status: STATUS_PENDING,
+				stdout: "",
+				stderr: "",
+			})
+		case runner.ActionCompleted:
+			last := &m.actions[len(m.actions)-1]
+			last.stdout = event.Stdout
+			last.stderr = event.Stderr
+			if event.Success {
+				last.status = STATUS_SUCCESS
+			} else {
+				last.status = STATUS_ERROR
+			}
+		case runner.Failed:
+			close(m.ch)
+			return m, func() tea.Msg {
+				return errorMsg{err: event.Err}
+			}
+		case runner.Done:
+			close(m.ch)
+			m.done = true
+			return m, nil
 		}
-	case runner.StdoutMsg:
-		m.actions[len(m.actions)-1].stdout = msg.Msg
-	case runner.StderrMsg:
-		m.actions[len(m.actions)-1].stderr = msg.Msg
-	case runner.ErrorMsg:
-		close(m.ch)
-		m.actions[len(m.actions)-1].status = STATUS_ERROR
-		return m, func() tea.Msg {
-			return errorMsg{err: msg.Error}
-		}
-	case runner.EndMsg:
-		close(m.ch)
-		m.done = true
-		return m, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -122,45 +130,46 @@ func (m logsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m logsModel) View() string {
-	str := fmt.Sprintf("%s ", titleStype.Render("Executing"))
+	var str strings.Builder
+	fmt.Fprintf(&str, "%s ", titleStype.Render("Executing"))
 
 	if m.showStd {
-		str += titleStype.Padding(0, 0).Render("TAB")
+		str.WriteString(titleStype.Padding(0, 0).Render("TAB"))
 	} else {
-		str += "TAB"
+		str.WriteString("TAB")
 	}
-	str += " to show outputs\n\n"
+	str.WriteString(" to show outputs\n\n")
 
 	for index, action := range m.actions {
 		switch action.status {
 		case STATUS_PENDING:
-			str += m.spinner.View()
+			str.WriteString(m.spinner.View())
 		case STATUS_SUCCESS:
-			str += okStyle.Render("OK")
+			str.WriteString(okStyle.Render("OK"))
 		case STATUS_ERROR:
-			str += koStyle.Render("KO")
+			str.WriteString(koStyle.Render("KO"))
 		}
 
-		str += fmt.Sprintf(" [%d/%d] %s\n", index+1, m.totalActions, action.name)
+		fmt.Fprintf(&str, " [%d/%d] %s\n", index+1, m.totalActions, action.name)
 
 		if m.showStd || action.status == STATUS_ERROR {
-			str += fmt.Sprintf("%s\n", action.stdout)
-			str += fmt.Sprintf("%s\n", action.stderr)
+			fmt.Fprintf(&str, "%s\n", action.stdout)
+			fmt.Fprintf(&str, "%s\n", action.stderr)
 		}
 	}
 
 	if m.done {
-		str += "\n"
+		str.WriteString("\n")
 
 		lastActionStatus := m.actions[len(m.actions)-1].status
 		if lastActionStatus == STATUS_SUCCESS {
-			str += okStyle.Render("DONE")
+			str.WriteString(okStyle.Render("DONE"))
 		} else {
-			str += koStyle.Render("DONE")
+			str.WriteString(koStyle.Render("DONE"))
 		}
 
-		str += " Press ENTER to continue or ESC to exit"
+		str.WriteString(" Press ENTER to continue or ESC to exit")
 	}
 
-	return str
+	return str.String()
 }

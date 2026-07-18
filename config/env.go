@@ -1,4 +1,4 @@
-package env
+package config
 
 import (
 	"bufio"
@@ -13,9 +13,7 @@ type EnvVar struct {
 	Value string
 }
 
-var envVars = make([]EnvVar, 0)
-
-func ParseEnv(filename string) error {
+func (c *Config) ParseEnv(filename string) error {
 	// Exit if no file
 	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -39,7 +37,7 @@ func ParseEnv(filename string) error {
 			continue
 		}
 
-		envVars = append(envVars, EnvVar{
+		c.envVars = append(c.envVars, EnvVar{
 			Key:   strings.TrimSpace(parts[0]),
 			Value: strings.TrimSpace(parts[1]),
 		})
@@ -48,7 +46,7 @@ func ParseEnv(filename string) error {
 	return scanner.Err()
 }
 
-func ReplaceEnv(input string) string {
+func (c *Config) ReplaceEnv(input string) string {
 	re := regexp.MustCompile(`env\(([A-Z\d_]+)\)`)
 
 	result := re.ReplaceAllStringFunc(input, func(match string) string {
@@ -57,7 +55,7 @@ func ReplaceEnv(input string) string {
 			return match
 		}
 
-		for _, envVar := range envVars {
+		for _, envVar := range c.envVars {
 			if envVar.Key == sub[1] {
 				return envVar.Value
 			}

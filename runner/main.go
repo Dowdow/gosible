@@ -1,11 +1,10 @@
 package runner
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/Dowdow/gosible/action"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -25,35 +24,7 @@ type Machine struct {
 
 type Action struct {
 	Name string
-	Type string
-	Args Args
-}
-
-type Args interface {
-	Validate() error
-	Run(session *ssh.Session) error
-}
-
-type ActionStartMsg struct {
-	Name string
-}
-
-type ActionEndMsg struct {
-	Success bool
-}
-
-type EndMsg struct{}
-
-type StdoutMsg struct {
-	Msg string
-}
-
-type StderrMsg struct {
-	Msg string
-}
-
-type ErrorMsg struct {
-	Error error
+	Args action.Args
 }
 
 type Runner struct {
@@ -66,20 +37,20 @@ func NewRunner(config *Config) *Runner {
 	}
 }
 
-func (r *Runner) Run(ch chan tea.Msg) {
+func (r *Runner) Run(ch chan Event) {
 	authMethods := []ssh.AuthMethod{}
 
 	// Private key auth method
 	if r.config.Machine.Ssh != "" {
 		key, err := os.ReadFile(r.config.Machine.Ssh)
 		if err != nil {
-			ch <- ErrorMsg{Error: fmt.Errorf("cannot read private key : %v", err)}
+			ch <- Failed{Err: fmt.Errorf("cannot read private key : %v", err)}
 			return
 		}
 
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
-			ch <- ErrorMsg{Error: fmt.Errorf("cannot parse private key : %v", err)}
+			ch <- Failed{Err: fmt.Errorf("cannot parse private key : %v", err)}
 			return
 		}
 
@@ -99,38 +70,25 @@ func (r *Runner) Run(ch chan tea.Msg) {
 
 	client, err := ssh.Dial("tcp", r.config.Machine.Address, clientConfig)
 	if err != nil {
-		ch <- ErrorMsg{Error: fmt.Errorf("cannot ssh dial : %v", err)}
+		ch <- Failed{Err: fmt.Errorf("cannot ssh dial : %v", err)}
 		return
 	}
 	defer client.Close()
 
+	executor := &sshExecutor{client: client}
+
 	for _, action := range r.config.Actions {
-		session, err := client.NewSession()
+		ch <- ActionStarted{Name: action.Name}
+
+		stdout, stderr, err := action.Args.Run(executor)
 		if err != nil {
-			ch <- ErrorMsg{Error: fmt.Errorf("cannot create ssh session : %v", err)}
-			return
-		}
-		defer session.Close()
-
-		ch <- ActionStartMsg{Name: action.Name}
-
-		var stdoutBuf, stderrBuf bytes.Buffer
-		session.Stdout = &stdoutBuf
-		session.Stderr = &stderrBuf
-
-		err = action.Args.Run(session)
-		if err != nil {
-			ch <- StdoutMsg{Msg: stdoutBuf.String()}
-			ch <- StderrMsg{Msg: stderrBuf.String()}
-			ch <- ActionEndMsg{Success: false}
-			ch <- ErrorMsg{Error: err}
+			ch <- ActionCompleted{Stdout: stdout, Stderr: stderr, Success: false}
+			ch <- Failed{Err: err}
 			return
 		}
 
-		ch <- StdoutMsg{Msg: stdoutBuf.String()}
-		ch <- StderrMsg{Msg: stderrBuf.String()}
-		ch <- ActionEndMsg{Success: true}
+		ch <- ActionCompleted{Stdout: stdout, Stderr: stderr, Success: true}
 	}
 
-	ch <- EndMsg{}
+	ch <- Done{}
 }

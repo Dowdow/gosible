@@ -1,4 +1,4 @@
-package runner
+package action
 
 import (
 	"fmt"
@@ -8,9 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/Dowdow/gosible/utils"
-	"golang.org/x/crypto/ssh"
 )
 
 type CopyArgs struct {
@@ -19,31 +16,31 @@ type CopyArgs struct {
 }
 
 func (a *CopyArgs) Validate() error {
-	a.Src = utils.ResolvePath(a.Src)
 	return nil
 }
 
-func (a *CopyArgs) Run(session *ssh.Session) error {
+func (a *CopyArgs) Prepare(resolvePath func(string) string, replaceEnv func(string) string) error {
+	a.Src = resolvePath(a.Src)
+	return nil
+}
+
+func (a *CopyArgs) Run(executor Executor) (string, string, error) {
 	srcInfo, err := os.Stat(a.Src)
 	if err != nil {
-		return fmt.Errorf("[copy] %v\n", err)
+		return "", "", fmt.Errorf("[copy] %v\n", err)
 	}
-
-	stdin, err := session.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("[copy] %v\n", err)
-	}
-	defer stdin.Close()
 
 	cmd := fmt.Sprintf("scp -tr %s", path.Dir(a.Dest))
-	if err := session.Start(cmd); err != nil {
-		return fmt.Errorf("[copy] %v\n", err)
+	stdin, wait, err := executor.Start(cmd)
+	if err != nil {
+		return "", "", fmt.Errorf("[copy] %v\n", err)
 	}
+	defer stdin.Close()
 
 	if !srcInfo.IsDir() {
 		f, err := os.Open(a.Src)
 		if err != nil {
-			return fmt.Errorf("[copy] %v\n", err)
+			return "", "", fmt.Errorf("[copy] %v\n", err)
 		}
 		defer f.Close()
 
@@ -112,17 +109,18 @@ func (a *CopyArgs) Run(session *ssh.Session) error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("[copy] %v\n", err)
+			return "", "", fmt.Errorf("[copy] %v\n", err)
 		}
 	}
 
 	stdin.Close()
 
-	if err := session.Wait(); err != nil {
-		return fmt.Errorf("[copy] %v\n", err)
+	stdout, stderr, err := wait()
+	if err != nil {
+		return stdout, stderr, fmt.Errorf("[copy] %v\n", err)
 	}
 
-	return nil
+	return stdout, stderr, nil
 }
 
 func pathDepthDiff(p1, p2 string) int {

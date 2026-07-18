@@ -2,6 +2,7 @@ package list
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -62,19 +63,20 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	str := fmt.Sprintf("%s\n\n", titleStype.Render(ansi.Truncate(m.Title, m.width-3, ellipsis)))
+	var str strings.Builder
+	fmt.Fprintf(&str, "%s\n\n", titleStype.Render(ansi.Truncate(m.Title, m.width-3, ellipsis)))
 
 	for index, item := range m.items {
 		title := ansi.Truncate(item.Title, m.width-3, ellipsis)
 		desc := ansi.Truncate(item.Desc, m.width-3, ellipsis)
 		if m.current == index {
-			str += fmt.Sprintf("> %s\n  %s\n\n", itemSelectedStyle.Render(itemTitleStyle.Render(title)), itemSelectedStyle.Render(desc))
+			fmt.Fprintf(&str, "> %s\n  %s\n\n", itemSelectedStyle.Render(itemTitleStyle.Render(title)), itemSelectedStyle.Render(desc))
 		} else {
-			str += fmt.Sprintf("  %s\n  %s\n\n", itemTitleStyle.Render(title), desc)
+			fmt.Fprintf(&str, "  %s\n  %s\n\n", itemTitleStyle.Render(title), desc)
 		}
 	}
 
-	return str
+	return str.String()
 }
 
 func (m Model) SelectedIndex() int {

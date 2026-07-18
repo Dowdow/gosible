@@ -4,28 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Dowdow/gosible/runner"
+	"github.com/Dowdow/gosible/action"
 )
 
 type Action struct {
 	Id   string      `json:"id"`
 	Name string      `json:"name"`
 	Type string      `json:"type"`
-	Args runner.Args `json:"-"`
+	Args action.Args `json:"-"`
 }
 
-func (a *Action) argsFactory() (runner.Args, error) {
+func (a *Action) argsFactory() (action.Args, error) {
 	switch a.Type {
 	case "copy":
-		return &runner.CopyArgs{}, nil
+		return &action.CopyArgs{}, nil
 	case "dir":
-		return &runner.DirArgs{}, nil
+		return &action.DirArgs{}, nil
 	case "docker":
-		return &runner.DockerArgs{}, nil
+		return &action.DockerArgs{}, nil
 	case "file":
-		return &runner.FileArgs{}, nil
+		return &action.FileArgs{}, nil
 	case "shell":
-		var s runner.ShellArgs = ""
+		var s action.ShellArgs = ""
 		return &s, nil
 	}
 

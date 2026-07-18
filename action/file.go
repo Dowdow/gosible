@@ -1,12 +1,9 @@
-package runner
+package action
 
 import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/Dowdow/gosible/env"
-	"golang.org/x/crypto/ssh"
 )
 
 type FileArgs struct {
@@ -15,29 +12,32 @@ type FileArgs struct {
 }
 
 func (a *FileArgs) Validate() error {
+	return nil
+}
+
+func (a *FileArgs) Prepare(resolvePath func(string) string, replaceEnv func(string) string) error {
 	for index, line := range a.Content {
-		a.Content[index] = env.ReplaceEnv(line)
+		a.Content[index] = replaceEnv(line)
 	}
 	return nil
 }
 
-func (a *FileArgs) Run(session *ssh.Session) error {
+func (a *FileArgs) Run(executor Executor) (string, string, error) {
 	file, err := os.CreateTemp("", "gosible-*")
 	if err != nil {
-		return fmt.Errorf("[file] %v\n", err)
+		return "", "", fmt.Errorf("[file] %v\n", err)
 	}
 	defer file.Close()
 	defer os.Remove(file.Name())
 
 	_, err = file.WriteString(strings.Join(a.Content, "\n"))
 	if err != nil {
-		return fmt.Errorf("[file] %v\n", err)
+		return "", "", fmt.Errorf("[file] %v\n", err)
 	}
 
 	copy := CopyArgs{
 		Src:  file.Name(),
 		Dest: a.Dest,
 	}
-	copy.Validate()
-	return copy.Run(session)
+	return copy.Run(executor)
 }

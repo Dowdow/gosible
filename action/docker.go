@@ -1,13 +1,10 @@
-package runner
+package action
 
 import (
 	"bytes"
 	"fmt"
 	"os/exec"
 	"path"
-
-	"github.com/Dowdow/gosible/utils"
-	"golang.org/x/crypto/ssh"
 )
 
 type DockerArgs struct {
@@ -20,8 +17,6 @@ type DockerArgs struct {
 }
 
 func (a *DockerArgs) Validate() error {
-	a.Src = utils.ResolvePath(a.Src)
-
 	// Validate tar name
 	if a.Tar == "" {
 		a.Tar = "image.tar"
@@ -33,7 +28,12 @@ func (a *DockerArgs) Validate() error {
 	return nil
 }
 
-func (a *DockerArgs) Run(session *ssh.Session) error {
+func (a *DockerArgs) Prepare(resolvePath func(string) string, replaceEnv func(string) string) error {
+	a.Src = resolvePath(a.Src)
+	return nil
+}
+
+func (a *DockerArgs) Run(executor Executor) (string, string, error) {
 	srcTarPath := path.Join(a.Src, a.Tar)
 
 	if a.Clean {
@@ -53,18 +53,17 @@ func (a *DockerArgs) Run(session *ssh.Session) error {
 
 	buildCmd := exec.Command("docker", args...)
 	if err := buildCmd.Run(); err != nil {
-		return fmt.Errorf("[docker] %v\n", err)
+		return "", "", fmt.Errorf("[docker] %v\n", err)
 	}
 
 	saveCmd := exec.Command("docker", "save", "-o", srcTarPath, a.Image)
 	if err := saveCmd.Run(); err != nil {
-		return fmt.Errorf("[docker] %v\n", err)
+		return "", "", fmt.Errorf("[docker] %v\n", err)
 	}
 
 	copy := CopyArgs{
 		Src:  srcTarPath,
 		Dest: path.Join(a.Dest, a.Tar),
 	}
-	copy.Validate()
-	return copy.Run(session)
+	return copy.Run(executor)
 }

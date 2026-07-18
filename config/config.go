@@ -8,15 +8,15 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Dowdow/gosible/env"
 	"github.com/Dowdow/gosible/runner"
-	"github.com/Dowdow/gosible/utils"
 )
 
 type Config struct {
 	Inventory []Machine `json:"inventory"`
 	Actions   []Action  `json:"actions"`
 	Tasks     []Task    `json:"tasks"`
+	configDir string
+	envVars   []EnvVar
 }
 
 func (c *Config) HasTask(taskIndex int) bool {
@@ -42,19 +42,19 @@ func (c *Config) Validate() error {
 		machineUserIds = append(machineUserIds, machine.Id)
 		for _, user := range machine.Users {
 			machineUserIds = append(machineUserIds, fmt.Sprintf("%s.%s", machine.Id, user.User))
-			err := user.Validate()
-			if err != nil {
-				return fmt.Errorf("invalid user %s: %v", user.User, err)
-			}
 		}
 	}
 
 	actionIds := []string{}
 	for _, action := range c.Actions {
 		// Validate args
-		err := action.Args.Validate()
-		if err != nil {
+		if err := action.Args.Validate(); err != nil {
 			return fmt.Errorf("action args are not valid: %s", action.Id)
+		}
+
+		// Resolve relative paths and env(VAR) placeholders
+		if err := action.Args.Prepare(c.ResolvePath, c.ReplaceEnv); err != nil {
+			return fmt.Errorf("cannot prepare action args: %s", action.Id)
 		}
 
 		actionIds = append(actionIds, action.Id)
@@ -79,9 +79,12 @@ func (c *Config) Validate() error {
 
 			// Validate args
 			if action.Id == "" {
-				err := action.Args.Validate()
-				if err != nil {
+				if err := action.Args.Validate(); err != nil {
 					return fmt.Errorf("action args are not valid: %s : %s", task.Name, action.Name)
+				}
+
+				if err := action.Args.Prepare(c.ResolvePath, c.ReplaceEnv); err != nil {
+					return fmt.Errorf("cannot prepare action args: %s : %s", task.Name, action.Name)
 				}
 			}
 		}
@@ -122,7 +125,6 @@ func (c *Config) Convert(taskIndex int, machineId string, userId string) (*runne
 		if action.Id == "" {
 			runnerActions = append(runnerActions, runner.Action{
 				Name: action.Name,
-				Type: action.Type,
 				Args: action.Args,
 			})
 		} else {
@@ -131,7 +133,6 @@ func (c *Config) Convert(taskIndex int, machineId string, userId string) (*runne
 				if a.Id == action.Id {
 					runnerActions = append(runnerActions, runner.Action{
 						Name: a.Name,
-						Type: a.Type,
 						Args: a.Args,
 					})
 				}
@@ -143,6 +144,14 @@ func (c *Config) Convert(taskIndex int, machineId string, userId string) (*runne
 		Machine: runnerMachine,
 		Actions: runnerActions,
 	}, nil
+}
+
+func (c *Config) ResolvePath(targetPath string) string {
+	if filepath.IsAbs(targetPath) {
+		return filepath.Clean(targetPath)
+	}
+
+	return filepath.Clean(filepath.Join(c.configDir, targetPath))
 }
 
 func ParseConfig() (*Config, error) {
@@ -174,9 +183,11 @@ func ParseConfig() (*Config, error) {
 		return nil, fmt.Errorf("cannot unmarshall the config file: %v", err)
 	}
 
-	utils.SetConfigDir(configFilePath)
+	c.configDir = filepath.Dir(configFilePath)
+	c.configDir, _ = filepath.Abs(c.configDir)
+	c.configDir = filepath.Clean(c.configDir)
 
-	err = env.ParseEnv(utils.ResolvePath(".env"))
+	err = c.ParseEnv(c.ResolvePath(".env"))
 	if err != nil {
 		return nil, fmt.Errorf("dotenv: %v", err)
 	}
